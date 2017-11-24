@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+<!--导入数据库配置文件-->
+    <context:property-placeholder location="db.properties"/>
+
+    <!--1.配置数据源  c3p0-->
+    <bean id="dataSource"
+          class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!--2.配置MyBatis的sqlsessionfactory-->
+    <bean id="sessionFactory"
+          class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--引入Mybatis全局配置文件-->
+        <property name="configLocation" value="mybatis-config.xml"/>
+        <!--引入数据源-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--3.配置事务-->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    
+    <!--4.配置事务属性-->
+    <tx:advice id="txAdvice" 
+            transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="*"/>
+            <tx:method name="add*"/>
+            <tx:method name="delete*"/>
+            <tx:method name="update*"/>
+            <tx:method name="find*"/>
+        </tx:attributes>
+    </tx:advice>
+    
+    <!--5.配置切面-->
+    <aop:config>
+        <!--配置切点表达式-->
+        <aop:pointcut id="pointCut" expression="execution(* com.lanou.mapper.*.*(..))"/>
+        <!--配置通知-->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="pointCut"/>
+    </aop:config>
+
+    <!--6.配置mybatis中的mapper接口对象, 使用批量扫描的方式
+            每一个接口对象会自动以接口名首字母小写的方式存储在spring容器中-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--要扫描的接口所在的包-->
+        <property name="basePackage" value="com.lanou.mapper"/>
+        <!--指定sqlSessionFactory-->
+        <property name="sqlSessionFactoryBeanName" value="sessionFactory"/>
+    </bean>
+</beans>
